@@ -14,8 +14,8 @@ processors:
     spike_limit_percentage: 15
 
 exporters:
-  logging: # For debugging the collector itself
-    loglevel: info
+  debug: # For debugging the collector itself
+    verbosity: detailed
 
   prometheus: # Exports metrics to be scraped by Prometheus
     endpoint: "0.0.0.0:8889" # Prometheus will scrape this
@@ -29,10 +29,15 @@ exporters:
     #   instance: true
     #   level: true
 
-  jaeger: # Exports traces to Jaeger
-    endpoint: "jaeger:14250" # Jaeger gRPC collector endpoint
+  otlp/jaeger: # Exports traces to Jaeger using OTLP
+    endpoint: "jaeger:4317" # Jaeger OTLP gRPC endpoint
     tls:
-      insecure: true # Set to false and configure TLS if Jaeger collector requires it
+      insecure: true
+
+extensions:
+  health_check:
+  pprof:
+  zpages:
 
 service:
   extensions: [health_check, pprof, zpages]
@@ -40,12 +45,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [logging, jaeger]
+      exporters: [debug, otlp/jaeger]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [logging, prometheus]
+      exporters: [debug, prometheus]
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [logging, loki]
+      exporters: [debug, loki]
