@@ -1,0 +1,51 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch: {} # Batches telemetry data before sending to exporters
+  memory_limiter: # Helps prevent out-of-memory issues
+    check_interval: 1s
+    limit_percentage: 75
+    spike_limit_percentage: 15
+
+exporters:
+  logging: # For debugging the collector itself
+    loglevel: info
+
+  prometheus: # Exports metrics to be scraped by Prometheus
+    endpoint: "0.0.0.0:8889" # Prometheus will scrape this
+    # namespace: "myapplication"
+
+  loki: # Exports logs to Loki
+    endpoint: "http://loki:3100/loki/api/v1/push"
+    # default_labels_enabled:
+    #   exporter: true
+    #   job: true
+    #   instance: true
+    #   level: true
+
+  jaeger: # Exports traces to Jaeger
+    endpoint: "jaeger:14250" # Jaeger gRPC collector endpoint
+    tls:
+      insecure: true # Set to false and configure TLS if Jaeger collector requires it
+
+service:
+  extensions: [health_check, pprof, zpages]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [logging, jaeger]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [logging, prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [logging, loki]
