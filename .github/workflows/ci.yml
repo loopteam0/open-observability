@@ -13,6 +13,8 @@ jobs:
   lint:
     name: Lint YAML configs
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,6 +43,8 @@ jobs:
   integration:
     name: Integration – stack health checks
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
