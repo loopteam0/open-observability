@@ -77,12 +77,6 @@ jobs:
           '
           echo "All services are up and healthy."
 
-      - name: Wait for OTel Collector to bind port 13133 (up to 60 s)
-        run: |
-          echo "Waiting for OTel Collector health check port..."
-          timeout 60 bash -c 'until curl -sf http://localhost:13133/ > /dev/null 2>&1; do sleep 3; done'
-          echo "OTel Collector port 13133 is open."
-
       - name: Check – Prometheus health
         run: |
           curl --retry 10 --retry-delay 5 --retry-all-errors \
