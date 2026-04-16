@@ -29,12 +29,8 @@ services:
     networks:
       - observability-net
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:13133/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 15s
+    # Note: no Docker-level healthcheck here because the collector image is distroless
+    # (no wget/curl/shell available). Health is validated by the CI workflow via curl on port 13133.
     depends_on:
       jaeger:
         condition: service_healthy
