@@ -52,24 +52,30 @@ jobs:
       - name: Start the observability stack
         run: docker compose up -d
 
-      - name: Wait for services to become ready (up to 90 s)
+      - name: Wait for all services to become healthy (up to 180 s)
         run: |
-          echo "Waiting for all services to be healthy..."
-          timeout 90 bash -c '
-            while ! docker compose ps --format json | python3 -c "
+          echo "Waiting for all services to report healthy..."
+          timeout 180 bash -c '
+            until [ "$(docker compose ps --format json \
+              | python3 -c "
           import sys, json
           services = [json.loads(l) for l in sys.stdin if l.strip()]
-          # All containers must be running (not exited/starting)
-          not_running = [s[\"Name\"] for s in services if s.get(\"State\") not in (\"running\",)]
-          if not_running:
-              print(\"Not yet running:\", not_running)
+          unhealthy = [s[\"Name\"] for s in services
+                       if s.get(\"Health\", \"healthy\") not in (\"healthy\", \"\")]
+          if unhealthy:
+              print(\"Not yet healthy:\", unhealthy, file=sys.stderr)
               sys.exit(1)
-          print(\"All containers are running.\")
-            "; do
+          not_running = [s[\"Name\"] for s in services if s.get(\"State\") != \"running\"]
+          if not_running:
+              print(\"Not yet running:\", not_running, file=sys.stderr)
+              sys.exit(1)
+          print(\"ok\")
+          ")" = "ok" ]; do
               echo "  ... still waiting"
               sleep 5
             done
           '
+          echo "All services are up and healthy."
 
       - name: Check – Prometheus health
         run: |
