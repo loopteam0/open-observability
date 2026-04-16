@@ -28,10 +28,16 @@ services:
       - "8889:8889"        # Prometheus exporter for app metrics (if configured)
     networks:
       - observability-net
+    restart: unless-stopped
+    # Note: no Docker-level healthcheck here because the collector image is distroless
+    # (no wget/curl/shell available). Health is validated by the CI workflow via curl on port 13133.
     depends_on:
-      - jaeger
-      - loki
-      - prometheus
+      jaeger:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
 
   # --------------------------------------------------------------------
   # Prometheus - Metrics Storage & Alerting
@@ -53,6 +59,12 @@ services:
     networks:
       - observability-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   # --------------------------------------------------------------------
   # Loki - Log Aggregation
@@ -69,6 +81,12 @@ services:
     networks:
       - observability-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   # --------------------------------------------------------------------
   # Jaeger - Distributed Tracing (All-in-one for simplicity)
@@ -90,6 +108,12 @@ services:
     networks:
       - observability-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:16686/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   # --------------------------------------------------------------------
   # Grafana - Visualization
@@ -110,10 +134,19 @@ services:
     networks:
       - observability-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     depends_on:
-      - prometheus
-      - loki
-      - jaeger
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      jaeger:
+        condition: service_healthy
 
 # Note: Sentry services have been temporarily removed due to ARM64 compatibility issues
 # If you need error tracking, consider using the hosted Sentry service or
